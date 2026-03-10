@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Excel IA — Assistente de Fórmulas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green: #1a7a4a;
+      --green-light: #6dba8a;
+      --green-dark: #0d5c38;
+      --bg: #0f1117;
+      --surface: #1e2130;
+      --surface2: #161b26;
+      --border: #2a2f42;
+      --text: #e8eaf0;
+      --muted: #9ca3af;
+      --dim: #4a5060;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* HEADER */
+    header { background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%); height: 58px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-shadow: 0 2px 20px rgba(0,0,0,0.4); }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { width: 34px; height: 34px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .logo-text { font-weight: 800; font-size: 15px; letter-spacing: -0.3px; }
+    .logo-sub { font-size: 10px; opacity: 0.65; }
+    .tabs { display: flex; gap: 6px; }
+    .tab { padding: 6px 14px; border-radius: 20px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; transition: all 0.2s; background: transparent; color: rgba(255,255,255,0.55); }
+    .tab.active { background: rgba(255,255,255,0.22); color: #fff; }
+
+    /* API KEY BANNER */
+    #apiKeyBanner { background: #1a1500; border-bottom: 1px solid #3a2a00; padding: 10px 20px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    #apiKeyBanner input { flex: 1; background: #0f1117; border: 1px solid #3a2a00; border-radius: 8px; padding: 7px 12px; color: var(--text); font-size: 12px; font-family: 'JetBrains Mono', monospace; outline: none; }
+    #apiKeyBanner button { padding: 7px 14px; background: #b45309; border: none; border-radius: 8px; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    #apiKeyBanner .banner-label { font-size: 12px; color: #fbbf24; white-space: nowrap; }
+
+    /* CONTENT */
+    .content { flex: 1; display: flex; overflow: hidden; }
+
+    /* ─── CHAT ─── */
+    #chatPanel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { display: flex; align-items: flex-start; gap: 10px; animation: fadeUp 0.25s ease; }
+    .msg.user { justify-content: flex-end; }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green-dark)); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+    .bubble { max-width: 74%; padding: 11px 15px; font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; }
+    .bubble.ai { background: var(--surface); border: 1px solid var(--border); border-radius: 16px 16px 16px 4px; }
+    .bubble.user { background: linear-gradient(135deg, var(--green), #148a52); border-radius: 16px 16px 4px 16px; }
+    .typing-dots { display: flex; gap: 5px; padding: 14px 18px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green-light); animation: bounce 1.2s infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    .suggestions { padding: 0 20px 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip { padding: 5px 11px; border-radius: 14px; border: 1px solid #2a3a2e; background: transparent; color: var(--green-light); font-size: 11.5px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; }
+    .chip:hover { background: #1a2a1e; }
+
+    .input-area { padding: 10px 20px 18px; border-top: 1px solid var(--surface); }
+    .input-box { display: flex; gap: 8px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 9px 10px; }
+    .input-box textarea { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 13.5px; resize: none; font-family: 'DM Sans', sans-serif; line-height: 1.5; max-height: 100px; overflow-y: auto; }
+    .send-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--green); color: #fff; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.2s; }
+    .send-btn:disabled { background: var(--border); cursor: not-allowed; }
+    .input-hint { font-size: 10.5px; color: var(--dim); text-align: center; margin-top: 6px; }
+
+    /* ─── FORMULAS ─── */
+    #formulasPanel { flex: 1; display: flex; overflow: hidden; }
+    .formula-list { width: 300px; flex-shrink: 0; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: width 0.3s; }
+    .formula-list.full { width: 100%; border-right: none; }
+    .list-filters { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .search-input { width: 100%; padding: 9px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; color: var(--text); font-size: 13px; outline: none; font-family: 'DM Sans', sans-serif; }
+    .cats { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; }
+    .cat-btn { padding: 3px 9px; border-radius: 10px; font-size: 10.5px; font-weight: 700; border: 1px solid var(--border); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.15s; background: transparent; color: var(--dim); }
+    .cat-btn.active { border-color: var(--green); background: #1a2a1e; color: var(--green-light); }
+    .formula-items { flex: 1; overflow-y: auto; padding: 10px; }
+    .count-label { font-size: 10.5px; color: var(--dim); padding: 2px 6px 8px; font-weight: 600; }
+    .formula-item { padding: 11px 13px; border-radius: 9px; cursor: pointer; transition: all 0.15s; margin-bottom: 3px; border: 1px solid transparent; }
+    .formula-item:hover { background: var(--surface2); }
+    .formula-item.selected { background: #1a2a1e; border-color: var(--green); }
+    .fi-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .fi-name { font-weight: 700; color: var(--green-light); font-size: 13.5px; font-family: 'JetBrains Mono', monospace; }
+    .fi-cat { font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 7px; background: #1e2a20; color: #4a9a6a; border: 1px solid #2a3a2e; }
+    .fi-desc { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+
+    /* DETAIL */
+    .formula-detail { flex: 1; overflow-y: auto; padding: 26px; }
+    .detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
+    .detail-name { font-size: 26px; font-weight: 800; color: var(--green-light); font-family: 'JetBrains Mono', monospace; }
+    .close-btn { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 7px; padding: 5px 11px; cursor: pointer; font-size: 12px; font-family: 'DM Sans', sans-serif; }
+    .section-label { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 7px; }
+    .detail-section { margin-bottom: 18px; }
+    .detail-text { font-size: 13.5px; color: #c8cad0; line-height: 1.7; }
+    .code-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 13px 15px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.5; }
+    .code-block.syntax { color: #a5d6b7; }
+    .code-block.example { color: #fbbf24; }
+    .ask-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--green), #148a52); border: none; border-radius: 11px; color: #fff; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 8px; transition: opacity 0.2s; }
+    .ask-btn:hover { opacity: 0.87; }
+
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-6px);opacity:1} }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📊</div>
+    <div>
+      <div class="logo-text">Excel IA</div>
+      <div class="logo-sub">Assistente & Biblioteca de Fórmulas</div>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('chat')">💬 Chat IA</button>
+    <button class="tab" onclick="switchTab('formulas')">📋 Fórmulas</button>
+  </div>
+</header>
+
+<div id="apiKeyBanner">
+  <span class="banner-label">🔑 Chave API Anthropic:</span>
+  <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+  <button onclick="saveKey()">Salvar</button>
+  <span id="keyStatus" style="font-size:12px;color:#6dba8a;display:none">✓ Salva</span>
+</div>
+
+<div class="content">
+
+  <!-- CHAT -->
+  <div id="chatPanel">
+    <div class="messages" id="messages">
+      <div class="msg">
+        <div class="avatar">📊</div>
+        <div class="bubble ai">Olá! 👋 Sou seu assistente especializado em Excel. Posso te ajudar com fórmulas, resolver problemas e criar soluções personalizadas. O que você precisa hoje?</div>
+      </div>
+    </div>
+    <div class="suggestions">
+      <button class="chip" onclick="setInput('Como usar PROCV?')">Como usar PROCV?</button>
+      <button class="chip" onclick="setInput('Diferença entre ÍNDICE+CORRESP e PROCV')">ÍNDICE+CORRESP vs PROCV</button>
+      <button class="chip" onclick="setInput('Como tratar o erro #N/D?')">Como tratar #N/D?</button>
+      <button class="chip" onclick="setInput('Como somar células por cor?')">Somar células por cor</button>
+      <button class="chip" onclick="setInput('Fórmula para calcular idade')">Calcular idade</button>
+    </div>
+    <div class="input-area">
+      <div class="input-box">
+        <textarea id="chatInput" rows="1" placeholder="Pergunte sobre Excel, peça uma fórmula..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">→</button>
+      </div>
+      <div class="input-hint">Enter para enviar · Shift+Enter para nova linha</div>
+    </div>
+  </div>
+
+  <!-- FORMULAS -->
+  <div id="formulasPanel" style="display:none">
+    <div class="formula-list full" id="formulaList">
+      <div class="list-filters">
+        <input class="search-input" id="searchInput" placeholder="🔍  Buscar fórmula..." oninput="renderFormulas()" />
+        <div class="cats" id="catBtns"></div>
+      </div>
+      <div class="formula-items" id="formulaItems"></div>
+    </div>
+    <div id="formulaDetail" style="display:none; flex:1; overflow-y:auto; padding:26px;"></div>
+  </div>
+
+</div>
+
+<script>
+const FORMULAS = [
+  { name:"PROCV", cat:"Pesquisa", syntax:"=PROCV(valor_proc; matriz_tabela; núm_índice_col; [proc_intervalo])", desc:"Procura um valor na primeira coluna de uma tabela e retorna um valor na mesma linha de outra coluna.", ex:"=PROCV(A2;B:D;2;0)" },
+  { name:"PROCH", cat:"Pesquisa", syntax:"=PROCH(valor_proc; matriz_tabela; núm_índice_lin; [proc_intervalo])", desc:"Procura um valor na primeira linha de uma tabela e retorna o valor na mesma coluna de outra linha.", ex:"=PROCH(A1;B1:Z2;2;0)" },
+  { name:"SE", cat:"Lógica", syntax:"=SE(teste_lógico; [valor_verdadeiro]; [valor_falso])", desc:"Retorna um valor se a condição for verdadeira e outro se for falsa.", ex:'=SE(A1>10;"Acima";"Abaixo")' },
+  { name:"SOMA", cat:"Matemática", syntax:"=SOMA(núm1; [núm2]; ...)", desc:"Soma todos os números em um intervalo de células.", ex:"=SOMA(A1:A10)" },
+  { name:"SOMASE", cat:"Matemática", syntax:"=SOMASE(intervalo; critérios; [intervalo_soma])", desc:"Soma as células que satisfazem a uma determinada condição.", ex:'=SOMASE(B:B;"Vendas";C:C)' },
+  { name:"SOMASES", cat:"Matemática", syntax:"=SOMASES(intervalo_soma; intervalo_critérios1; critérios1; ...)", desc:"Soma células que satisfazem múltiplos critérios.", ex:'=SOMASES(C:C;A:A;"SP";B:B;"Vendas")' },
+  { name:"CONT.SE", cat:"Estatística", syntax:"=CONT.SE(intervalo; critérios)", desc:"Conta o número de células que satisfazem um critério.", ex:'=CONT.SE(A:A;"Sim")' },
+  { name:"CONT.SES", cat:"Estatística", syntax:"=CONT.SES(intervalo1; critérios1; [intervalo2]; [critérios2]; ...)", desc:"Conta células que satisfazem múltiplos critérios.", ex:'=CONT.SES(A:A;"SP";B:B;">100")' },
+  { name:"ÍNDICE", cat:"Pesquisa", syntax:"=ÍNDICE(matriz; núm_linha; [núm_coluna])", desc:"Retorna o valor da célula na interseção de uma linha e coluna específicas.", ex:"=ÍNDICE(A1:C10;2;3)" },
+  { name:"CORRESP", cat:"Pesquisa", syntax:"=CORRESP(valor_proc; matriz_proc; [tipo_corresp])", desc:"Retorna a posição relativa de um item em uma matriz.", ex:"=CORRESP(D1;A:A;0)" },
+  { name:"XLOOKUP", cat:"Pesquisa", syntax:"=XLOOKUP(valor_proc; matriz_proc; matriz_retorno; [se_não_encontrado]; ...)", desc:"Pesquisa em um intervalo e retorna um item correspondente. Substitui o PROCV.", ex:'=XLOOKUP(A2;B:B;C:C;"Não encontrado")' },
+  { name:"MÉDIA", cat:"Estatística", syntax:"=MÉDIA(núm1; [núm2]; ...)", desc:"Retorna a média aritmética dos argumentos.", ex:"=MÉDIA(B2:B20)" },
+  { name:"MÉDIASE", cat:"Estatística", syntax:"=MÉDIASE(intervalo; critérios; [intervalo_média])", desc:"Retorna a média de todas as células que satisfazem um critério.", ex:'=MÉDIASE(A:A;"SP";B:B)' },
+  { name:"MÁXIMO", cat:"Estatística", syntax:"=MÁXIMO(núm1; [núm2]; ...)", desc:"Retorna o valor máximo de um conjunto de valores.", ex:"=MÁXIMO(C1:C100)" },
+  { name:"MÍNIMO", cat:"Estatística", syntax:"=MÍNIMO(núm1; [núm2]; ...)", desc:"Retorna o valor mínimo de um conjunto de valores.", ex:"=MÍNIMO(C1:C100)" },
+  { name:"CONCATENAR", cat:"Texto", syntax:"=CONCATENAR(texto1; [texto2]; ...)", desc:"Une vários itens de texto em um único item.", ex:'=CONCATENAR(A1;" ";B1)' },
+  { name:"CONCAT", cat:"Texto", syntax:"=CONCAT(texto1; [texto2]; ...)", desc:"Versão moderna do CONCATENAR, aceita intervalos diretamente.", ex:"=CONCAT(A1:A5)" },
+  { name:"TEXTJOIN", cat:"Texto", syntax:"=TEXTJOIN(delimitador; ignorar_vazio; texto1; ...)", desc:"Combina texto de vários intervalos usando um delimitador.", ex:'=TEXTJOIN(", ";VERDADEIRO;A1:A10)' },
+  { name:"TEXTO", cat:"Texto", syntax:"=TEXTO(valor; formato_texto)", desc:"Converte um valor em texto com um formato específico.", ex:'=TEXTO(A1;"DD/MM/AAAA")' },
+  { name:"ESQUERDA", cat:"Texto", syntax:"=ESQUERDA(texto; [núm_caract])", desc:"Retorna os primeiros N caracteres de uma cadeia de texto.", ex:"=ESQUERDA(A1;3)" },
+  { name:"DIREITA", cat:"Texto", syntax:"=DIREITA(texto; [núm_caract])", desc:"Retorna os últimos N caracteres de uma cadeia de texto.", ex:"=DIREITA(A1;4)" },
+  { name:"EXT.TEXTO", cat:"Texto", syntax:"=EXT.TEXTO(texto; núm_inicial; núm_caract)", desc:"Retorna caracteres do meio de uma cadeia de texto.", ex:"=EXT.TEXTO(A1;3;5)" },
+  { name:"LOCALIZAR", cat:"Texto", syntax:"=LOCALIZAR(texto_proc; no_texto; [núm_inicial])", desc:"Localiza uma cadeia de texto dentro de outra (não diferencia maiúsculas).", ex:"=LOCALIZAR(\"@\";A1)" },
+  { name:"SUBSTITUIR", cat:"Texto", syntax:"=SUBSTITUIR(texto; texto_antigo; novo_texto; [núm_ocorrência])", desc:"Substitui um texto específico dentro de uma cadeia.", ex:'=SUBSTITUIR(A1;" ";"-")' },
+  { name:"ARRUMAR", cat:"Texto", syntax:"=ARRUMAR(texto)", desc:"Remove espaços extras de um texto, deixando apenas espaços simples entre palavras.", ex:"=ARRUMAR(A1)" },
+  { name:"MAIÚSCULA", cat:"Texto", syntax:"=MAIÚSCULA(texto)", desc:"Converte todo o texto para maiúsculas.", ex:"=MAIÚSCULA(A1)" },
+  { name:"MINÚSCULA", cat:"Texto", syntax:"=MINÚSCULA(texto)", desc:"Converte todo o texto para minúsculas.", ex:"=MINÚSCULA(A1)" },
+  { name:"PRI.MAIÚSCULA", cat:"Texto", syntax:"=PRI.MAIÚSCULA(texto)", desc:"Coloca a primeira letra de cada palavra em maiúscula.", ex:"=PRI.MAIÚSCULA(A1)" },
+  { name:"NÚM.CARACT", cat:"Texto", syntax:"=NÚM.CARACT(texto)", desc:"Retorna o número de caracteres em uma cadeia de texto.", ex:"=NÚM.CARACT(A1)" },
+  { name:"ARRED", cat:"Matemática", syntax:"=ARRED(núm; núm_dígitos)", desc:"Arredonda um número para um número especificado de dígitos.", ex:"=ARRED(A1;2)" },
+  { name:"ARREDONDAR.PARA.CIMA", cat:"Matemática", syntax:"=ARREDONDAR.PARA.CIMA(núm; núm_dígitos)", desc:"Arredonda um número para cima, afastando-o de zero.", ex:"=ARREDONDAR.PARA.CIMA(A1;2)" },
+  { name:"ARREDONDAR.PARA.BAIXO", cat:"Matemática", syntax:"=ARREDONDAR.PARA.BAIXO(núm; núm_dígitos)", desc:"Arredonda um número para baixo, em direção a zero.", ex:"=ARREDONDAR.PARA.BAIXO(A1;2)" },
+  { name:"INT", cat:"Matemática", syntax:"=INT(núm)", desc:"Arredonda um número para baixo até o inteiro mais próximo.", ex:"=INT(4.9)" },
+  { name:"MOD", cat:"Matemática", syntax:"=MOD(núm; divisor)", desc:"Retorna o resto de uma divisão.", ex:"=MOD(10;3)" },
+  { name:"POTÊNCIA", cat:"Matemática", syntax:"=POTÊNCIA(núm; potência)", desc:"Retorna o resultado de um número elevado a uma potência.", ex:"=POTÊNCIA(2;10)" },
+  { name:"RAIZ", cat:"Matemática", syntax:"=RAIZ(núm)", desc:"Retorna uma raiz quadrada positiva.", ex:"=RAIZ(A1)" },
+  { name:"ABS", cat:"Matemática", syntax:"=ABS(núm)", desc:"Retorna o valor absoluto de um número.", ex:"=ABS(A1)" },
+  { name:"HOJE", cat:"Data/Hora", syntax:"=HOJE()", desc:"Retorna a data atual.", ex:"=HOJE()" },
+  { name:"AGORA", cat:"Data/Hora", syntax:"=AGORA()", desc:"Retorna a data e hora atuais.", ex:"=AGORA()" },
+  { name:"ANO", cat:"Data/Hora", syntax:"=ANO(data_serial)", desc:"Retorna o ano correspondente a uma data.", ex:"=ANO(A1)" },
+  { name:"MÊS", cat:"Data/Hora", syntax:"=MÊS(data_serial)", desc:"Retorna o mês de uma data como número de 1 a 12.", ex:"=MÊS(A1)" },
+  { name:"DIA", cat:"Data/Hora", syntax:"=DIA(data_serial)", desc:"Retorna o dia de uma data como número de 1 a 31.", ex:"=DIA(A1)" },
+  { name:"DATEDIF", cat:"Data/Hora", syntax:'=DATEDIF(data_inicial; data_final; "unidade")', desc:"Calcula a diferença entre duas datas em anos, meses ou dias.", ex:'=DATEDIF(A1;B1;"Y")' },
+  { name:"DIAS.ÚTEIS", cat:"Data/Hora", syntax:"=DIAS.ÚTEIS(data_inicial; data_final; [feriados])", desc:"Retorna o número de dias úteis entre duas datas.", ex:"=DIAS.ÚTEIS(A1;B1)" },
+  { name:"SEERRO", cat:"Lógica", syntax:"=SEERRO(valor; valor_se_erro)", desc:"Retorna um valor alternativo se a fórmula gerar erro.", ex:'=SEERRO(PROCV(A1;B:C;2;0);"Não encontrado")' },
+  { name:"SENÃODISP", cat:"Lógica", syntax:"=SENÃODISP(valor; valor_se_nd)", desc:"Retorna um valor alternativo apenas se a fórmula retornar o erro #N/D.", ex:'=SENÃODISP(PROCV(A1;B:C;2;0);"—")' },
+  { name:"E", cat:"Lógica", syntax:"=E(lógico1; [lógico2]; ...)", desc:"Retorna VERDADEIRO se todos os argumentos forem VERDADEIROS.", ex:"=E(A1>0;B1>0)" },
+  { name:"OU", cat:"Lógica", syntax:"=OU(lógico1; [lógico2]; ...)", desc:"Retorna VERDADEIRO se qualquer argumento for VERDADEIRO.", ex:"=OU(A1=1;A1=2)" },
+  { name:"NÃO", cat:"Lógica", syntax:"=NÃO(lógico)", desc:"Inverte o valor lógico de seu argumento.", ex:"=NÃO(A1=0)" },
+  { name:"SES", cat:"Lógica", syntax:"=SES(teste1; valor1; [teste2]; [valor2]; ...)", desc:"Verifica se uma ou mais condições são atendidas e retorna o valor correspondente.", ex:'=SES(A1>90;"A";A1>70;"B";VERDADEIRO;"C")' },
+  { name:"ÚNICO", cat:"Pesquisa", syntax:"=ÚNICO(matriz; [por_col]; [exatamente_uma_vez])", desc:"Retorna uma lista de valores únicos em uma lista ou intervalo.", ex:"=ÚNICO(A1:A100)" },
+  { name:"FILTRO", cat:"Pesquisa", syntax:"=FILTRO(matriz; incluir; [se_vazio])", desc:"Filtra um intervalo de dados com base nos critérios definidos.", ex:'=FILTRO(A:B;C:C>100;"Vazio")' },
+  { name:"CLASSIFICAR", cat:"Pesquisa", syntax:"=CLASSIFICAR(matriz; [índice]; [ordem]; [por_col])", desc:"Classifica o conteúdo de um intervalo ou matriz.", ex:"=CLASSIFICAR(A1:A10;1;-1)" },
+  { name:"SEQUÊNCIA", cat:"Matemática", syntax:"=SEQUÊNCIA(linhas; [colunas]; [início]; [incremento])", desc:"Gera uma lista de números sequenciais em uma matriz.", ex:"=SEQUÊNCIA(10;1;1;1)" },
+];
+
+const CATS = ["Todas", ...new Set(FORMULAS.map(f => f.cat))];
+let activeTab = "chat";
+let activeCat = "Todas";
+let selectedFormula = null;
+let apiKey = localStorage.getItem("xlai_key") || "";
+let loading = false;
+let chatHistory = [];
+
+// Init
+if (apiKey) {
+  document.getElementById("apiKeyInput").value = apiKey;
+  document.getElementById("keyStatus").style.display = "inline";
+}
+renderCats();
+renderFormulas();
+
+function saveKey() {
+  apiKey = document.getElementById("apiKeyInput").value.trim();
+  localStorage.setItem("xlai_key", apiKey);
+  document.getElementById("keyStatus").style.display = "inline";
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll(".tab").forEach((t,i) => t.classList.toggle("active", (i===0&&tab==="chat")||(i===1&&tab==="formulas")));
+  document.getElementById("chatPanel").style.display = tab === "chat" ? "flex" : "none";
+  document.getElementById("formulasPanel").style.display = tab === "formulas" ? "flex" : "none";
+}
+
+function setInput(text) {
+  document.getElementById("chatInput").value = text;
+  document.getElementById("chatInput").focus();
+}
+
+function autoResize(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 100) + "px";
+}
+
+function handleKey(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+async function sendMessage() {
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if (!text || loading) return;
+  if (!apiKey) { alert("Por favor, insira sua chave API Anthropic primeiro."); return; }
+
+  input.value = "";
+  input.style.height = "auto";
+  appendMsg("user", text);
+  chatHistory.push({ role: "user", content: text });
+  showTyping();
+  loading = true;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: "Você é um assistente especialista em Microsoft Excel. Responda sempre em português brasileiro. Explique fórmulas com exemplos práticos, ajude a resolver problemas, sugira soluções e ensine boas práticas. Ao mostrar fórmulas, formate claramente.",
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    removeTyping();
+    const reply = data.content?.map(b => b.text||"").join("") || (data.error ? `Erro: ${data.error.message}` : "Erro ao obter resposta.");
+    appendMsg("ai", reply);
+    chatHistory.push({ role: "assistant", content: reply });
+  } catch(e) {
+    removeTyping();
+    appendMsg("ai", "Erro de conexão. Verifique sua chave API e tente novamente.");
+  }
+  loading = false;
+}
+
+function appendMsg(role, text) {
+  const msgs = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "msg" + (role === "user" ? " user" : "");
+  div.innerHTML = role === "ai"
+    ? `<div class="avatar">📊</div><div class="bubble ai">${escHtml(text)}</div>`
+    : `<div class="bubble user">${escHtml(text)}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById("messages");
+  const div = document.createElement("div");
+  div.className = "msg"; div.id = "typing";
+  div.innerHTML = `<div class="avatar">📊</div><div class="bubble ai typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById("typing");
+  if (t) t.remove();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+}
+
+function renderCats() {
+  const el = document.getElementById("catBtns");
+  el.innerHTML = CATS.map(c => `<button class="cat-btn${c===activeCat?" active":""}" onclick="setcat('${c}')">${c}</button>`).join("");
+}
+
+function setcat(c) { activeCat = c; renderCats(); renderFormulas(); }
+
+function renderFormulas() {
+  const q = document.getElementById("searchInput").value.toLowerCase();
+  const list = FORMULAS.filter(f => (activeCat==="Todas"||f.cat===activeCat) && (f.name.toLowerCase().includes(q)||f.desc.toLowerCase().includes(q)));
+  const el = document.getElementById("formulaItems");
+  el.innerHTML = `<div class="count-label">${list.length} fórmula${list.length!==1?"s":""}</div>` +
+    list.map(f => `<div class="formula-item${selectedFormula?.name===f.name?" selected":""}" onclick="selectFormula('${f.name}')">
+      <div class="fi-header"><span class="fi-name">${f.name}</span><span class="fi-cat">${f.cat}</span></div>
+      <div class="fi-desc">${f.desc}</div>
+    </div>`).join("");
+}
+
+function selectFormula(name) {
+  selectedFormula = FORMULAS.find(f => f.name === name);
+  renderFormulas();
+  const fl = document.getElementById("formulaList");
+  const fd = document.getElementById("formulaDetail");
+  fl.classList.remove("full");
+  fl.style.width = "300px";
+  fd.style.display = "block";
+  fd.innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div class="detail-name">${selectedFormula.name}</div>
+        <span class="fi-cat" style="margin-top:6px;display:inline-block">${selectedFormula.cat}</span>
+      </div>
+      <button class="close-btn" onclick="closeDetail()">✕ Fechar</button>
+    </div>
+    <div class="detail-section">
+      <div class="section-label">Descrição</div>
+      <div class="detail-text">${selectedFormula.desc}</div>
+    </div>
+    <div class="detail-section">
+      <div class="section-label">Sintaxe</div>
+      <div class="code-block syntax">${selectedFormula.syntax}</div>
+    </div>
+    <div class="detail-section">
+      <div class="section-label">Exemplo</div>
+      <div class="code-block example">${selectedFormula.ex}</div>
+    </div>
+    <button class="ask-btn" onclick="askAI('${selectedFormula.name}')">💬 Perguntar à IA sobre ${selectedFormula.name}</button>
+  `;
+}
+
+function closeDetail() {
+  selectedFormula = null;
+  document.getElementById("formulaDetail").style.display = "none";
+  document.getElementById("formulaList").classList.add("full");
+  renderFormulas();
+}
+
+function askAI(name) {
+  switchTab("chat");
+  setInput(`Me explique a fórmula ${name} com exemplos práticos e casos de uso.`);
+}
+</script>
+</body>
+</html>
